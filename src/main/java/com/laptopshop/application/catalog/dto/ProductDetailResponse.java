@@ -28,6 +28,12 @@ public class ProductDetailResponse {
     private String os;
     private BigDecimal weightKg;
     private Integer batteryWh;
+    private String ports;       // thêm mới
+    private String color;       // thêm mới
+    private Double avgRating;   // thêm mới
+    private Long reviewCount;   // thêm mới
+    private Integer stockQuantity; // thêm mới
+    private Boolean inStock;    // thêm mới
 
     public static ProductDetailResponse from(Product product) {
         ProductDetailResponse dto = new ProductDetailResponse();
@@ -45,6 +51,7 @@ public class ProductDetailResponse {
                 .map(ProductImage::getImageUrl)
                 .collect(Collectors.toList())
                 : List.of();
+
         if (product.getSpec() != null) {
             dto.cpu = product.getSpec().getCpu();
             dto.ram = product.getSpec().getRam();
@@ -54,7 +61,34 @@ public class ProductDetailResponse {
             dto.os = product.getSpec().getOs();
             dto.weightKg = product.getSpec().getWeightKg();
             dto.batteryWh = product.getSpec().getBatteryWh();
+            dto.ports = product.getSpec().getPorts();   // thêm mới
+            dto.color = product.getSpec().getColor();   // thêm mới
         }
+
+        // Rating & Review — thêm mới
+        if (product.getReviews() != null && !product.getReviews().isEmpty()) {
+            dto.reviewCount = (long) product.getReviews().size();
+            dto.avgRating = product.getReviews().stream()
+                    .mapToInt(r -> r.getRating())
+                    .average()
+                    .orElse(0.0);
+        } else {
+            dto.reviewCount = 0L;
+            dto.avgRating = 0.0;
+        }
+
+        // Stock — thêm mới
+        if (product.getInventories() != null && !product.getInventories().isEmpty()) {
+            int total = product.getInventories().stream()
+                    .mapToInt(inv -> inv.getQuantity())
+                    .sum();
+            dto.stockQuantity = total;
+            dto.inStock = total > 0;
+        } else {
+            dto.stockQuantity = 0;
+            dto.inStock = false;
+        }
+
         return dto;
     }
 }

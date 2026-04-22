@@ -25,7 +25,7 @@ public class CartService {
     private final UserRepository userRepository;
 
     public CartResponse getCart(Long userId) {
-        List<CartItemResponse> items = cartItemRepository.findAllByUserId(userId)
+        List<CartItemResponse> items = cartItemRepository.findAllByUserIdWithDetails(userId) // ← đổi sang method mới
                 .stream()
                 .map(CartItemResponse::from)
                 .collect(Collectors.toList());

@@ -21,8 +21,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         WHERE p.isActive = true
         AND (:brandId IS NULL OR p.brand.id = :brandId)
         AND (:categoryId IS NULL OR p.category.id = :categoryId)
-        AND (:minPrice IS NULL OR p.salePrice >= :minPrice OR p.basePrice >= :minPrice)
-        AND (:maxPrice IS NULL OR p.salePrice <= :maxPrice OR p.basePrice <= :maxPrice)
+        AND (:minPrice IS NULL OR 
+             (CASE WHEN p.salePrice IS NOT NULL THEN p.salePrice ELSE p.basePrice END) >= :minPrice)
+        AND (:maxPrice IS NULL OR 
+             (CASE WHEN p.salePrice IS NOT NULL THEN p.salePrice ELSE p.basePrice END) <= :maxPrice)
         AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
     """)
     Page<Product> findWithFilters(
@@ -33,4 +35,25 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    // Query 1: images + spec + brand + category
+    @Query("SELECT p FROM Product p " +
+            "LEFT JOIN FETCH p.images " +
+            "LEFT JOIN FETCH p.spec " +
+            "LEFT JOIN FETCH p.brand " +
+            "LEFT JOIN FETCH p.category " +
+            "WHERE p.id = :id AND p.isActive = true")
+    Optional<Product> findByIdWithImages(@Param("id") Long id);
+
+    // Query 2: chỉ inventories
+    @Query("SELECT p FROM Product p " +
+            "LEFT JOIN FETCH p.inventories " +
+            "WHERE p.id = :id")
+    Optional<Product> findByIdWithInventories(@Param("id") Long id);
+
+    // Query 3: chỉ reviews
+    @Query("SELECT p FROM Product p " +
+            "LEFT JOIN FETCH p.reviews " +
+            "WHERE p.id = :id")
+    Optional<Product> findByIdWithReviews(@Param("id") Long id);
 }

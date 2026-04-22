@@ -4,6 +4,7 @@ import com.laptopshop.application.catalog.dto.BrandResponse;
 import com.laptopshop.application.catalog.dto.CategoryResponse;
 import com.laptopshop.application.catalog.dto.ProductDetailResponse;
 import com.laptopshop.application.catalog.dto.ProductResponse;
+import com.laptopshop.domain.catalog.entity.Product;
 import com.laptopshop.domain.catalog.repository.BrandRepository;
 import com.laptopshop.domain.catalog.repository.CategoryRepository;
 import com.laptopshop.domain.catalog.repository.ProductRepository;
@@ -43,9 +44,16 @@ public class CatalogService {
     }
 
     public ProductDetailResponse getProductDetail(Long id) {
-        return productRepository.findByIdAndIsActiveTrue(id)
-                .map(ProductDetailResponse::from)
+        Product product = productRepository.findByIdWithImages(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+
+        productRepository.findByIdWithInventories(id)
+                .ifPresent(p -> product.setInventories(p.getInventories()));
+
+        productRepository.findByIdWithReviews(id)
+                .ifPresent(p -> product.setReviews(p.getReviews()));
+
+        return ProductDetailResponse.from(product);
     }
 
     public List<BrandResponse> getBrands() {
