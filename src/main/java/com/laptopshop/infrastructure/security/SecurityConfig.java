@@ -53,8 +53,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
                         // Khách hàng
-                        .requestMatchers("/api/cart/**").hasRole("USER")
-                        .requestMatchers("/api/orders/**").hasRole("USER")
+                        .requestMatchers("/api/cart/**").authenticated()
+                        .requestMatchers("/api/orders/**").authenticated()
 
                         // Chỉ super_admin
                         .requestMatchers("/api/admin/staff/**").hasRole("SUPER_ADMIN")

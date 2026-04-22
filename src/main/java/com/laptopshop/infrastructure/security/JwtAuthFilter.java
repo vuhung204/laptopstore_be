@@ -28,6 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
+        String requestPath = request.getRequestURI();
 
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
@@ -46,10 +47,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     username, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(auth);
+                    System.out.println("[JwtAuthFilter] Authenticated " + username
+                            + " for " + request.getMethod() + " " + requestPath
+                            + " with roles=" + roles);
                 }
             } catch (Exception e) {
+                System.out.println("[JwtAuthFilter] Invalid token for "
+                        + request.getMethod() + " " + requestPath
+                        + ": " + e.getMessage());
                 SecurityContextHolder.clearContext();
             }
+        } else if (requestPath.startsWith("/api/")) {
+            System.out.println("[JwtAuthFilter] Missing Authorization header for "
+                    + request.getMethod() + " " + requestPath);
         }
 
         filterChain.doFilter(request, response);

@@ -10,6 +10,8 @@ import com.laptopshop.domain.order.enums.OrderStatus;
 import com.laptopshop.domain.order.repository.AddressRepository;
 import com.laptopshop.domain.order.repository.CartItemRepository;
 import com.laptopshop.domain.order.repository.OrderRepository;
+import com.laptopshop.domain.store.entity.Store;
+import com.laptopshop.domain.store.repository.StoreRepository;
 import com.laptopshop.domain.user.entity.User;
 import com.laptopshop.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,23 +31,21 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final AddressRepository addressRepository;
     private final UserRepository userRepository;
+    private final StoreRepository storeRepository;
 
     @Transactional
     public OrderResponse createOrder(Long userId, CreateOrderRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay user"));
 
-        // Lấy địa chỉ
         Address address = addressRepository.findByIdAndUserId(request.getAddressId(), userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy địa chỉ"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay dia chi"));
 
-        // Lấy giỏ hàng
         List<CartItem> cartItems = cartItemRepository.findAllByUserId(userId);
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Giỏ hàng trống");
+            throw new RuntimeException("Gio hang trong");
         }
 
-        // Tạo order items
         List<OrderItem> orderItems = cartItems.stream().map(cartItem -> {
             OrderItem item = new OrderItem();
             item.setProduct(cartItem.getProduct());
@@ -58,16 +58,18 @@ public class OrderService {
             return item;
         }).collect(Collectors.toList());
 
-        // Tính tiền
         BigDecimal subtotal = orderItems.stream()
                 .map(OrderItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal shippingFee = new BigDecimal("30000");
         BigDecimal totalAmount = subtotal.add(shippingFee);
 
-        // Tạo order
+        Store defaultStore = storeRepository.findFirstByIsActiveTrueOrderByIdAsc()
+                .orElseThrow(() -> new RuntimeException("Khong tim thay cua hang dang hoat dong"));
+
         Order order = new Order();
         order.setUser(user);
+        order.setStore(defaultStore);
         order.setAddress(address);
         order.setOrderCode(generateOrderCode());
         order.setStatus(OrderStatus.PENDING);
@@ -77,13 +79,10 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
         order.setNote(request.getNote());
 
-        // Link order items với order
         orderItems.forEach(item -> item.setOrder(order));
         order.setItems(orderItems);
 
         orderRepository.save(order);
-
-        // Xóa giỏ hàng sau khi đặt
         cartItemRepository.deleteAllByUserId(userId);
 
         return OrderResponse.from(order);
@@ -99,16 +98,16 @@ public class OrderService {
     public OrderResponse getOrderDetail(Long userId, Long orderId) {
         return orderRepository.findByIdAndUserId(orderId, userId)
                 .map(OrderResponse::from)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay don hang"));
     }
 
     @Transactional
     public OrderResponse cancelOrder(Long userId, Long orderId) {
         Order order = orderRepository.findByIdAndUserId(orderId, userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay don hang"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Chỉ có thể hủy đơn hàng ở trạng thái chờ xác nhận");
+            throw new RuntimeException("Chi co the huy don hang o trang thai cho xac nhan");
         }
 
         order.setStatus(OrderStatus.CANCELLED);
@@ -119,7 +118,7 @@ public class OrderService {
 
     private String generateOrderCode() {
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.valueOf((int)(Math.random() * 9000) + 1000);
+        String random = String.valueOf((int) (Math.random() * 9000) + 1000);
         return "ORD-" + date + "-" + random;
     }
 }
