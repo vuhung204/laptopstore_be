@@ -8,5 +8,10 @@ public enum OrderStatus {
     DELIVERED,
     COMPLETED,
     CANCELLED,
-    REFUNDED
+    REFUNDED;
+
+    public static OrderStatus fromString(String value) {
+        return OrderStatus.valueOf(value.toUpperCase());
+    }
+
 }
